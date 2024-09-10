@@ -1,6 +1,26 @@
+import { error } from "console";
+import BookModel from "../../../model/BookModel";
 import { ReturnBook } from "./ReturnBook";
+import { useEffect,useState } from "react";
 
 export const Carousel = () => {
+    const [books,setBooks] = useState<BookModel[]>([]);
+    const [isLoading,setIsLoading] = useState(true);
+    const [httpError,setHttpError] = useState(null);
+
+    //this can trigger many times first time it will load at the time when the component is loaded, and when the [varialble of state] is changed it will retrigger.
+    useEffect(() =>{
+        const fecthBooks = async () => {
+
+        };
+
+        fecthBooks().catch((error:any) =>{
+            setIsLoading(false);
+            setHttpError(error.message)
+        })
+
+    },[])
+
     return (
         <div className='container mt-5' style={{ height: 550 }}>
             <div className='homepage-carousel-title'>
