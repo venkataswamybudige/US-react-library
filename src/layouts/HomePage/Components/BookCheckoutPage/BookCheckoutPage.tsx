@@ -3,12 +3,19 @@ import BookModel from "../../../../model/BookModel";
 import { SpinerLoading } from "../../../Utils/SpinnerlLoading";
 import { StarsReview } from "../../../Utils/StarsReview";
 import { CheckoutAndReviewBox } from "./CheckoutAndReviewBox";
+import ReviewModel from "../../../../model/ReviewModel";
+import { LatestReviews } from "./LatestReviews";
 
 export const BookCheckoutPage = () => {
 
     const [book, setBook] = useState<BookModel>();
     const [isLoading, setIsLoading] = useState(true);
     const [httpError, setHttpError] = useState(null);
+
+    // review state
+    const[reviews,setReviews] = useState<ReviewModel[]>([]);
+    const[totalStars,setTotalStars] = useState(0);
+    const[isLoadingReview,setIsLoadingReview] = useState(true);
 
     const bookId = (window.location.pathname).split('/')[2];
 
@@ -44,8 +51,55 @@ export const BookCheckoutPage = () => {
         })
     }, []);
 
+    useEffect(() => {
+        const fetchBookReviews = async () => {
+            const reviewUrl : string = `http://localhost:8080/api/reviews/search/findByBookId?id=${bookId}`;
 
-    if (isLoading) {
+            const responseReviews = await fetch(reviewUrl);
+
+            if(!responseReviews.ok){
+                throw new Error('something went wrong');
+            }
+
+            const responseJsonReviews = await responseReviews.json();
+
+            const responseData = responseJsonReviews._embedded.reviews;
+
+            const loadedReviews : ReviewModel[] = [];
+
+            let waitedStarReviews : number = 0;
+
+            for(const key in responseData){
+                loadedReviews.push({
+                    id: responseData[key].id,
+                    userEmail: responseData[key].userEmail,
+                    date: responseData[key].date,
+                    rating: responseData[key].rating,
+                    book_id:responseData[key].bookId,
+                    reviewDescription:responseData[key].reviewDescription
+                });
+                waitedStarReviews = waitedStarReviews + responseData[key].rating;
+
+
+            }
+
+            if(loadedReviews){
+                const round  = (Math.round((waitedStarReviews / loadedReviews.length) * 2) / 2).toFixed(1);
+                setTotalStars(Number(round));
+            }
+
+            setReviews(loadedReviews);
+            setIsLoadingReview(false);
+        };
+
+        fetchBookReviews().catch((error : any ) => {
+            setIsLoadingReview(false);
+            setHttpError(error.message);
+
+        })
+    },[]);
+
+    if (isLoading || isLoadingReview) {
         return (
             <SpinerLoading />
         )
@@ -76,12 +130,13 @@ export const BookCheckoutPage = () => {
                             <h2>{book?.title}</h2>
                             <h5 className='text-primary'>{book?.author}</h5>
                             <p className='lead'>{book?.description}</p>
-                            <StarsReview rating={2.5} size={32}/>
+                            <StarsReview rating={totalStars} size={32}/>
                         </div>
                     </div>
                     <CheckoutAndReviewBox book={book} mobile={false}/>
                 </div>
                 <hr />
+                <LatestReviews reviews={reviews} bookId={book?.id} mobile={false}/>
             </div>
             <div className='container d-lg-none mt-5'>
                 <div className='d-flex justify-content-center align-items-center'>
@@ -97,11 +152,12 @@ export const BookCheckoutPage = () => {
                         <h2>{book?.title}</h2>
                         <h5 className='text-primary'>{book?.author}</h5>
                         <p className='lead'>{book?.description}</p>
-                        <StarsReview rating={5} size={32}/>
+                        <StarsReview rating={totalStars} size={32}/>
                     </div>
                 </div>
                 <CheckoutAndReviewBox book={book} mobile={true}/>
                 <hr />
+                <LatestReviews reviews={reviews} bookId={book?.id} mobile={true}/>
             </div>
         </div>
     );
